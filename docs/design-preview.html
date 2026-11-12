@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>HardwareDisplay — макет Android</title>
+<style>
+:root{color-scheme:dark;--bg:#101217;--surface:#1a1e25;--raised:#222831;--line:#353e49;--fg:#f0f4f6;--muted:#afbbc5;--lime:#d4f86e;--cyan:#71d6e7;--violet:#c2a7ff;--warn:#ffcf79;font-family:Geist,Inter,system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;color:var(--fg);background:#0a0c10}button,input,select{font:inherit}button{color:inherit;cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}button{min-height:44px}button:disabled{opacity:.45;cursor:default}h1,h2,h3,p{margin:0}small{color:var(--muted)}
+.stage{min-height:100svh;display:grid;grid-template-columns:minmax(230px,350px) minmax(330px,410px);gap:clamp(32px,7vw,96px);align-items:center;justify-content:center;padding:30px 24px;background:radial-gradient(ellipse at 72% 40%,#1b2224 0,transparent 48%),linear-gradient(90deg,#15191e55 1px,transparent 1px),linear-gradient(#15191e55 1px,transparent 1px),#0a0c10;background-size:auto,32px 32px,32px 32px,auto}
+.intro{display:grid;gap:20px}.brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:.02em}.brand-mark{width:31px;height:31px;border:1px solid #587033;border-radius:8px;display:grid;place-items:center;color:var(--lime);font-family:monospace}.intro h1{font-size:clamp(2.3rem,4.2vw,3.8rem);line-height:1.03;letter-spacing:-.067em;max-width:9ch}.intro p{color:var(--muted);line-height:1.55;max-width:31ch}.preview-controls{display:grid;gap:7px;justify-items:start}.preview-controls a{color:var(--cyan);font-size:.84rem;margin-top:8px}.device{max-width:100%;border:1px solid #3d484e;border-radius:34px;background:var(--bg);padding:14px 16px 17px;box-shadow:0 24px 65px #0009,0 0 0 5px #14191e;min-width:0}.sys{height:24px;display:flex;justify-content:space-between;padding:0 6px;color:var(--muted);font:11px ui-monospace,monospace}.sys b{letter-spacing:.08em;font-weight:500}.screen{display:grid;gap:12px;min-height:560px;align-content:start}.top{display:flex;align-items:center;justify-content:space-between;gap:9px}.top h2{font-size:1.2rem;letter-spacing:-.028em}.pc{display:grid;gap:2px;justify-items:start;min-height:48px;padding:0;border:0;background:none;text-align:left}.pc strong{font-size:1.16rem;letter-spacing:-.03em}.pc small{font-size:.68rem}.signal{display:flex;align-items:center;gap:7px;font-size:.72rem;white-space:nowrap;color:var(--lime)}.signal::before{content:'';width:7px;height:7px;background:currentColor;border-radius:50%}.signal.off{color:var(--warn)}.signal.off::before{border:1px solid currentColor;background:transparent}.tabs{display:flex;gap:7px;overflow:auto;padding:2px 1px 4px}.chip,.subtle,.main-action,.ghost{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 13px;font-weight:650;font-size:.79rem;min-height:44px}.chip{white-space:nowrap}.chip[aria-pressed=true]{background:#27331f;color:var(--lime);border-color:#526438}.subtle:hover,.ghost:hover,.chip:hover{border-color:#71808f}.main-action{background:var(--lime);color:#151d0c;border-color:var(--lime)}.ghost{background:transparent}.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{display:grid;gap:6px;background:var(--surface);border:1px solid #2a323c;border-radius:15px;padding:10px 12px;text-align:left;min-width:0}.metric:hover{border-color:#6f8650}.metric .number{font-size:1.38rem}.caption{font-size:.72rem;color:var(--muted);display:block}.number,.stamp,.time-labels,.reading{font-family:'IBM Plex Mono',ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.055em}.number{font-weight:650;line-height:1}.number small{font-size:.56em;letter-spacing:-.01em;margin-left:4px}.hero{border:1px solid #475a33;border-radius:22px;background:radial-gradient(ellipse at 80% 100%,#222f24,transparent 72%),#1b241d;padding:13px 13px 10px;min-width:0}.hero-head{display:flex;justify-content:space-between;align-items:start;gap:6px}.hero-label{font-size:.82rem}.hero-tag{color:var(--lime);font-size:.67rem}.hero .number{font-size:3rem;color:var(--lime);margin:8px 0 4px}.hero .number small{color:inherit}.hero.stale .number,.metric.stale .number{color:var(--muted)}.hero-foot,.time-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:.63rem;gap:8px}.hero canvas{height:60px;width:100%;display:block}.actions{display:grid;grid-template-columns:1fr auto;gap:8px}.wide{width:100%}.meter{height:3px;border-radius:10px;background:#303843;overflow:hidden}.meter i{display:block;height:100%;background:var(--tone);border-radius:inherit}.notice{font-size:.72rem;color:var(--warn);background:#342a1c;border-radius:10px;padding:8px 10px}.notice-row{display:flex;align-items:center;justify-content:space-between;gap:8px}.notice-row button{min-height:32px;padding:0 8px;font-size:.7rem}.comp{display:grid;gap:8px}.lane{background:var(--surface);border:1px solid #2b333b;border-radius:12px;padding:8px 10px}.lane-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.lane-head strong{font-size:.8rem}.reading{font-size:1.03rem;color:var(--tone)}.lane canvas{display:block;width:100%;height:56px;cursor:crosshair}.stamp{font-size:.83rem;color:var(--lime)}.cursor-ui{display:grid;gap:6px}.cursor-ui input{width:100%;accent-color:var(--lime);margin:0;height:28px}.settings{display:grid;gap:10px}.settings label{display:grid;gap:5px;font-size:.8rem;color:var(--muted)}.settings input,.settings select{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);min-height:44px;padding:8px 10px;min-width:0;width:100%}.rule{height:1px;background:var(--line);margin:2px 0}.detail{border:1px solid var(--line);background:var(--surface);border-radius:17px;padding:15px;display:grid;gap:12px}.detail .number{font-size:2.6rem}.app-note{font-size:.73rem;color:var(--muted);line-height:1.42}.empty-space{height:4px}.home{margin:12px auto 0;border-radius:99px;background:#75818c;width:92px;height:3px;opacity:.8}.banner-mobile{display:none}.editor-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.land .device{width:min(100%,660px)}.land.stage{grid-template-columns:minmax(200px,300px) minmax(380px,660px);gap:clamp(20px,4vw,65px)}.land .screen{min-height:375px}.land .dashboard{display:grid;grid-template-columns:1.18fr 1fr;gap:8px}.dashboard{display:grid;gap:8px}.land .hero canvas{height:69px}
+@media(max-width:760px){.stage,.land.stage{display:flex;flex-direction:column;padding:16px 10px;gap:15px}.intro{width:min(100%,410px);gap:7px}.intro h1,.intro p,.preview-controls a{display:none}.preview-controls{display:flex;flex-wrap:wrap}.preview-controls button{min-height:44px}.device{width:min(100%,410px);box-shadow:none}.land .device{width:min(100%,660px)}.brand{font-size:.9rem}.banner-mobile{display:inline;color:var(--muted);font-size:.72rem}.sys{display:none}.screen{min-height:0}.land .dashboard{grid-template-columns:1fr 1fr}}
+@media(max-width:380px){.device{padding:10px}.land .dashboard{grid-template-columns:1fr}.hero .number{font-size:2.6rem}.chip,.subtle,.main-action,.ghost{padding-inline:10px}}
+@media(max-height:520px) and (min-width:761px){.land.stage{padding-block:10px;grid-template-columns:minmax(175px,210px) minmax(360px,600px);gap:20px}.land .intro{gap:12px}.land .intro h1,.land .intro p{display:none}.land .device{padding:9px 12px}.land .screen{min-height:0;gap:8px}.land .sys{display:none}.land .home{margin-top:7px}.land .metric{padding:7px 8px;gap:4px}.land .metric .number{font-size:1.14rem}.land .hero canvas{height:57px}.land .hero .number{font-size:2.55rem}}
+</style>
+</head>
+<body>
+<main class="stage" id="stage">
+  <aside class="intro" aria-label="О макете">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">▥</span> HardwareDisplay <span class="banner-mobile">· Демо</span></div>
+    <h1>Фокус и контекст</h1>
+    <p>Главный датчик всегда на виду. Сравнение показывает, какие показатели изменились в тот же момент.</p>
+    <div class="preview-controls">
+      <small>Интерактивный макет · синтетические замеры</small>
+      <button class="ghost" type="button" data-action="rotate" id="rotate" aria-pressed="false">Альбомная раскладка</button>
+      <button class="ghost" type="button" data-action="connection" id="connection" aria-pressed="false">Имитировать обрыв</button>
+      <a href="DESIGN.md">Спецификация дизайна</a>
+    </div>
+  </aside>
+  <section class="device" aria-label="Макет экрана Android">
+    <div class="sys" aria-hidden="true"><span>20:42</span><b>Wi‑Fi ▰</b></div>
+    <div class="screen" id="screen"></div>
+    <div class="home" aria-hidden="true"></div>
+  </section>
+</main>
+<script>
+const sensors = {
+  gpu: {name:'Загрузка GPU', unit:'%', value:86, range:[0,100], tone:'#d4f86e', shape:[42,47,50,43,62,66,51,57,76,78,71,73,87,83,79,88,82,86]},
+  cpu: {name:'Загрузка CPU', unit:'%', value:48, range:[0,100], tone:'#71d6e7', shape:[32,37,30,39,38,45,41,46,49,55,48,46,51,47,46,52,44,48]},
+  heat: {name:'GPU Hotspot', unit:'°C', value:72, range:[40,95], tone:'#ffcf79', shape:[53,54,54,54,57,59,59,62,62,63,64,66,67,69,70,72,72,72]},
+  vram: {name:'Видеопамять', unit:'ГиБ', value:11.2, total:16, range:[0,16], tone:'#c2a7ff', shape:[6.8,7.1,7.1,7.2,7.2,8.2,8.2,8.4,9.5,9.5,9.6,10.2,10.2,10.6,10.7,10.7,11,11.2]},
+  ram: {name:'Оперативная память', unit:'ГиБ', value:18.7, total:32, range:[0,32], tone:'#71d6e7', shape:[14,14.3,14.5,14.5,15.4,15.4,15.4,16,16.1,16.7,16.9,16.9,17.1,17.6,17.6,18.2,18.5,18.7]}
+};
+const defaults = [
+  {name:'Игра', focus:'gpu', compare:['heat','vram']},
+  {name:'Рендер', focus:'cpu', compare:['ram','gpu']},
+  {name:'Температуры', focus:'heat', compare:['gpu','cpu']}
+];
+let presets = defaults;
+try { presets = JSON.parse(localStorage.getItem('hardware-display-presets')) || defaults; } catch {}
+let current = 0;
+let page = 'panel';
+let metric = 'gpu';
+let offline = false;
+let landscape = false;
+let duration = 15;
+let cursor = 13;
+let draft = null;
+let gap = false;
+const screen = document.getElementById('screen');
+const decimal = new Intl.NumberFormat('ru', {maximumFractionDigits:1});
+const format = value => decimal.format(value);
+const escapeText = value => String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const button = (label, action, css='subtle', extra='') => `<button class="${css}" type="button" data-action="${action}" ${extra}>${label}</button>`;
+const selected = () => presets[current];
+const plot = (id, full=false) => `<canvas data-plot="${id}" data-full="${full}" aria-label="Демонстрационный график: ${sensors[id].name}"></canvas>`;
+const persist = () => { try { localStorage.setItem('hardware-display-presets',JSON.stringify(presets)); } catch {} };
+const valueText = (s, showTotal=false) => `${format(s.value)}${showTotal && s.total ? ' / '+s.total : ''}<small>${s.unit}</small>`;
+const clock = point => {
+  const minute = 20*60+42-Math.round(duration*(17-point)/17);
+  return `${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`;
+};
+const isGap = index => gap && index >= 10 && index <= 12;
+
+function panel() {
+  const preset = selected();
+  const sensor = sensors[preset.focus];
+  const cards = Object.entries(sensors).filter(([id])=>id!==preset.focus).map(([id,item])=>
+    `<button class="metric ${offline?'stale':''}" type="button" data-action="metric:${id}" style="--tone:${item.tone}"><span class="caption">${item.name}</span><span class="number">${valueText(item,true)}</span><span class="meter" aria-hidden="true"><i style="width:${100*(item.value-item.range[0])/(item.range[1]-item.range[0])}%"></i></span></button>`).join('');
+  return `<header class="top"><button class="pc" type="button" data-action="pc"><strong>Студия ⌄</strong><small>Рабочая станция</small></button><span class="signal ${offline?'off':''}" role="status">${offline?'Связь потеряна':'В эфире'}</span></header>
+    <nav class="tabs" aria-label="Пресеты">${presets.map((item,index)=>button(escapeText(item.name),`preset:${index}`,'chip',`aria-pressed="${index===current}"`)).join('')}</nav>
+    ${offline?`<div class="notice notice-row"><span>Последний замер в 20:42</span>${button('Повторить','connection','ghost')}</div>`:''}
+    <div class="dashboard"><section class="hero ${offline?'stale':''}" aria-label="Главный датчик"><div class="hero-head"><strong class="hero-label">${sensor.name}</strong><span class="hero-tag">Главный датчик</span></div><div class="number">${valueText(sensor)}</div>${plot(preset.focus)}<div class="hero-foot"><span>Последние 15 мин</span><span>${offline?'Последний замер':gap?'Есть разрыв':'Замер сейчас'}</span></div></section><div class="cards">${cards}</div></div>
+    <div class="actions">${button('Сравнить показатели','compare','main-action')}${button('Изменить','edit')}</div>`;
+}
+
+function comparison() {
+  const preset = selected();
+  return `<header class="top"><h2>Сравнение</h2>${button('К панели','panel','ghost')}</header>
+    <nav class="tabs" aria-label="Период">${[5,15,60].map(min=>button(min+' мин',`period:${min}`,'chip',`aria-pressed="${duration===min}"`)).join('')}</nav>
+    <div class="comp">${[preset.focus,...preset.compare].map((id,index)=>{
+      const item=sensors[id];
+      return `<section class="lane" style="--tone:${index===0?'var(--lime)':item.tone}"><div class="lane-head"><strong>${item.name}</strong><span class="reading" data-reading="${id}"></span></div>${plot(id,true)}<div class="time-labels"><span>Шкала ${item.range.join('–')} ${item.unit}</span><span>${clock(0)} — ${clock(17)}</span></div></section>`;
+    }).join('')}</div>
+    <div class="cursor-ui"><label for="cursor">Общее время <span class="stamp" id="stamp"></span></label><input id="cursor" type="range" min="0" max="17" value="${cursor}"></div>
+    ${gap?'<p class="app-note">Разрыв графика соответствует отсутствию замеров.</p>':''}`;
+}
+
+function editor() {
+  const options = (chosen, excluded=[]) => Object.entries(sensors).filter(([id])=>!excluded.includes(id)).map(([id,sensor])=>`<option value="${id}" ${id===chosen?'selected':''}>${sensor.name}</option>`).join('');
+  return `<header class="top"><h2>Изменить пресет</h2>${button('Отмена','panel','ghost')}</header>
+    <div class="settings"><label>Название<input id="preset-name" type="text" maxlength="32" value="${escapeText(draft.name)}"></label>
+    <label>Главный датчик<select id="focus-select">${options(draft.focus)}</select></label>
+    <label>Первый ряд сравнения<select id="compare-first">${options(draft.compare[0],[draft.focus,draft.compare[1]])}</select></label>
+    <label>Второй ряд сравнения<select id="compare-second">${options(draft.compare[1],[draft.focus,draft.compare[0]])}</select></label></div>
+    <div class="editor-row">${button('Сохранить','save','main-action')}${button('Сохранить копию','copy')}</div>`;
+}
+
+function details() {
+  const sensor = sensors[metric];
+  const isFocus = metric===selected().focus;
+  const inComparison = isFocus || selected().compare.includes(metric);
+  return `<header class="top"><h2>${sensor.name}</h2>${button('К панели','panel','ghost')}</header><section class="detail"><span class="caption">${offline?'Последний замер в 20:42':'Текущий замер'}</span><div class="number">${valueText(sensor,true)}</div><div class="app-note">Источник: ${['gpu','heat','vram'].includes(metric)?'Дискретная видеокарта':'Рабочая станция'}</div></section>
+    ${button(isFocus?'Уже главный датчик':'Сделать главным','focus','main-action',isFocus?'disabled':'')}
+    ${button(inComparison?'Открыть сравнение':'Заменить второй ряд','add-compare')}`;
+}
+
+function computer() {
+  return `<header class="top"><h2>Подключение</h2>${button('К панели','panel','ghost')}</header><section class="detail"><strong>Студия</strong><span class="signal ${offline?'off':''}">${offline?'Связь потеряна':'В эфире'}</span><p class="app-note">Макет показывает синтетическую телеметрию. Сопряжение с ПК доступно в будущей Android-версии.</p></section>${button(offline?'Имитировать восстановление':'Имитировать обрыв','connection','wide subtle')}`;
+}
+
+function render() {
+  const pages = {panel,compare:comparison,edit:editor,metric:details,pc:computer};
+  screen.innerHTML = pages[page]();
+  if (page==='compare') updateCursor();
+  else drawAll();
+}
+
+function drawAll() { screen.querySelectorAll('canvas').forEach(draw); }
+
+function draw(canvas) {
+  const item = sensors[canvas.dataset.plot];
+  const full = canvas.dataset.full==='true';
+  const {width:w,height:h} = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width=Math.round(w*ratio); canvas.height=Math.round(h*ratio);
+  const ctx=canvas.getContext('2d');
+  if (!ctx || !w || !h) return;
+  ctx.scale(ratio,ratio);
+  const pad=3;
+  const x=i=>pad+i*(w-2*pad)/17;
+  const y=value=>h-pad-(value-item.range[0])*(h-2*pad)/(item.range[1]-item.range[0]);
+  const tone=canvas.dataset.plot===selected().focus?'#d4f86e':item.tone;
+  ctx.lineWidth=1; ctx.strokeStyle='#a8babc28';
+  for (const line of [0.15,0.5,0.85]) { ctx.beginPath(); ctx.moveTo(pad,h*line); ctx.lineTo(w-pad,h*line); ctx.stroke(); }
+  let segments=[[]];
+  item.shape.forEach((point,index)=>{
+    if(isGap(index)) { if(segments.at(-1).length) segments.push([]); }
+    else segments.at(-1).push([x(index),y(point)]);
+  });
+  for (const segment of segments) {
+    if(!segment.length) continue;
+    if(!full) {
+      const fill=ctx.createLinearGradient(0,0,0,h);
+      fill.addColorStop(0,tone+'45'); fill.addColorStop(1,tone+'05');
+      ctx.beginPath();ctx.moveTo(segment[0][0],h);segment.forEach(([a,b])=>ctx.lineTo(a,b));ctx.lineTo(segment.at(-1)[0],h);ctx.fillStyle=fill;ctx.fill();
+    }
+    ctx.beginPath(); ctx.moveTo(...segment[0]); segment.slice(1).forEach(([a,b])=>ctx.lineTo(a,b));
+    ctx.strokeStyle=tone;ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  }
+  const pos=full?cursor:17;
+  if(full) {ctx.beginPath();ctx.moveTo(x(pos),0);ctx.lineTo(x(pos),h);ctx.strokeStyle='#aab7c7aa';ctx.lineWidth=1;ctx.stroke();}
+  if(!isGap(pos)) {ctx.beginPath();ctx.arc(x(pos),y(item.shape[pos]),3,0,Math.PI*2);ctx.fillStyle=tone;ctx.fill();}
+}
+
+function updateCursor() {
+  document.getElementById('stamp').textContent=clock(cursor);
+  const input = document.getElementById('cursor');
+  input.value=cursor;
+  input.setAttribute('aria-valuetext',clock(cursor));
+  screen.querySelectorAll('[data-reading]').forEach(element=>{
+    const sensor=sensors[element.dataset.reading];
+    element.textContent=isGap(cursor)?'Нет замера':`${format(sensor.shape[cursor])} ${sensor.unit}`;
+  });
+  drawAll();
+}
+
+function setFocus(preset,id) {
+  if(preset.focus===id) return;
+  if(preset.compare.includes(id)) preset.compare=preset.compare.map(item=>item===id?preset.focus:item);
+  preset.focus=id;
+}
+
+document.addEventListener('click',event=>{
+  const control=event.target.closest('[data-action]');
+  if(!control) {
+    const chart=event.target.closest('canvas[data-full=true]');
+    if(chart && page==='compare') {const rect=chart.getBoundingClientRect();cursor=Math.max(0,Math.min(17,Math.round(17*(event.clientX-rect.left)/rect.width)));updateCursor();}
+    return;
+  }
+  const [action,arg]=control.dataset.action.split(':');
+  const previousPage=page;
+  if(action==='rotate') {
+    landscape=!landscape;
+    document.getElementById('stage').classList.toggle('land',landscape);
+    control.textContent=landscape?'Портретная раскладка':'Альбомная раскладка';
+    control.setAttribute('aria-pressed',landscape);
+    drawAll();
+    return;
+  }
+  if(action==='connection') {
+    offline=!offline;
+    if(!offline) gap=true;
+    const toggle=document.getElementById('connection');
+    toggle.textContent=offline?'Имитировать восстановление':'Имитировать обрыв';
+    toggle.setAttribute('aria-pressed',offline);
+  }
+  if(action==='preset') current=Number(arg);
+  if(action==='period') duration=Number(arg);
+  if(action==='metric') {page='metric';metric=arg;}
+  if(['panel','compare','pc'].includes(action)) page=action;
+  if(action==='edit') {draft=structuredClone(selected());page='edit';}
+  if(action==='focus') {setFocus(selected(),metric);persist();page='panel';}
+  if(action==='add-compare') {
+    if(metric!==selected().focus && !selected().compare.includes(metric)) selected().compare=[selected().compare[0],metric];
+    persist();page='compare';
+  }
+  if(action==='save' || action==='copy') {
+    draft.name=draft.name.trim()||selected().name;
+    if(action==='save') presets[current]=draft;
+    else {draft.name=(draft.name.slice(0,24)+' (копия)');presets.push(draft);current=presets.length-1;}
+    persist();page='panel';
+  }
+  render();
+  if(document.contains(control)) return;
+  if(previousPage!==page) {
+    const destination=screen.querySelector('h2, .pc');
+    destination.tabIndex=destination.matches('button')?0:-1;
+    destination.focus({preventScroll:true});
+    return;
+  }
+  const replacement=[...screen.querySelectorAll('[data-action]')].find(item=>item.dataset.action===control.dataset.action);
+  replacement?.focus({preventScroll:true});
+});
+
+document.addEventListener('input',event=>{
+  if(event.target.id==='cursor') {cursor=Number(event.target.value);updateCursor();}
+  if(event.target.id==='preset-name') draft.name=event.target.value;
+});
+
+document.addEventListener('change',event=>{
+  const {id,value}=event.target;
+  if(id==='focus-select') setFocus(draft,value);
+  else if(id==='compare-first') draft.compare[0]=value;
+  else if(id==='compare-second') draft.compare[1]=value;
+  else return;
+  render();
+  document.getElementById(id).focus({preventScroll:true});
+});
+
+window.addEventListener('resize',drawAll);
+render();
+</script>
+</body>
+</html>

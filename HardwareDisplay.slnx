@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/windows/">
+    <Project Path="windows/HardwareDisplay.Core/HardwareDisplay.Core.csproj" />
+    <Project Path="windows/HardwareDisplay.Host/HardwareDisplay.Host.csproj" />
+    <Project Path="windows/HardwareDisplay.Windows/HardwareDisplay.Windows.csproj" />
+  </Folder>
+  <Folder Name="/windows/tests/">
+    <Project Path="windows/tests/HardwareDisplay.Tests/HardwareDisplay.Tests.csproj" />
+  </Folder>
+</Solution>
