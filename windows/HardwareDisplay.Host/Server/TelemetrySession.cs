@@ -37,8 +37,13 @@ internal static class TelemetrySession
         var receiving = Task.CompletedTask;
         try
         {
-            await SendAsync(socket, HelloMessage.Create(hostId, collector.StreamEpoch, collector.SamplePeriodMs), sendTimeout, token)
-                .ConfigureAwait(false);
+            await SendAsync(
+                    socket,
+                    JsonSerializer.SerializeToUtf8Bytes(
+                        HelloMessage.Create(hostId, collector.StreamEpoch, collector.SamplePeriodMs),
+                        ProtocolJson.Options),
+                    sendTimeout,
+                    token).ConfigureAwait(false);
 
             receiving = ReceiveAsync(socket);
             var sentRevision = -1L;
@@ -53,11 +58,11 @@ internal static class TelemetrySession
 
                 if (frame.Catalog.Revision != sentRevision)
                 {
-                    await SendAsync(socket, FrameMapper.ToCatalogMessage(frame), sendTimeout, token).ConfigureAwait(false);
+                    await SendAsync(socket, frame.CatalogPayload, sendTimeout, token).ConfigureAwait(false);
                     sentRevision = frame.Catalog.Revision;
                 }
 
-                await SendAsync(socket, FrameMapper.ToSnapshotMessage(frame), sendTimeout, token).ConfigureAwait(false);
+                await SendAsync(socket, frame.SnapshotPayload, sendTimeout, token).ConfigureAwait(false);
 
                 if (receiving.IsCompleted)
                 {
@@ -85,9 +90,12 @@ internal static class TelemetrySession
         }
     }
 
-    private static async Task SendAsync(WebSocket socket, object message, TimeSpan timeout, CancellationToken token)
+    /// <summary>
+    /// Кадр уже сериализован один раз на замер, поэтому отправка не тратит CPU пропорционально
+    /// числу телефонов и не создаёт копию JSON на каждое соединение.
+    /// </summary>
+    private static async Task SendAsync(WebSocket socket, byte[] payload, TimeSpan timeout, CancellationToken token)
     {
-        var payload = JsonSerializer.SerializeToUtf8Bytes(message, message.GetType(), ProtocolJson.Options);
         await socket.SendAsync(payload, WebSocketMessageType.Text, true, token).WaitAsync(timeout, token).ConfigureAwait(false);
     }
 

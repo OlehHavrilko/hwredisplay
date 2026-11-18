@@ -11,6 +11,7 @@ using HardwareDisplay.Core.Collection;
 using HardwareDisplay.Core.Model;
 using HardwareDisplay.Host.Pairing;
 using HardwareDisplay.Host.Runtime;
+using HardwareDisplay.Host.Desktop;
 using QRCoder;
 
 namespace HardwareDisplay.Host;
@@ -22,13 +23,12 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<SensorRow> _sensors = [];
     private readonly ObservableCollection<ClientRow> _clients = [];
     private readonly Dictionary<string, SensorRow> _rowsBySensor = new(StringComparer.Ordinal);
-    private bool _closing;
 
-    public MainWindow()
+    public MainWindow(AppRuntime runtime)
     {
         InitializeComponent();
 
-        _runtime = AppRuntime.Create();
+        _runtime = runtime;
 
         SensorList.ItemsSource = _sensors;
         ClientList.ItemsSource = _clients;
@@ -38,13 +38,30 @@ public partial class MainWindow : Window
         FingerprintText.Text = _runtime.Identity.FingerprintSha256;
 
         Loaded += OnLoadedAsync;
+        Closed += (_, _) => _timer.Stop();
         _timer.Tick += OnTick;
     }
 
+    public AppRuntime Runtime => _runtime;
+
     private async void OnLoadedAsync(object sender, RoutedEventArgs e)
     {
-        await StartServerAsync().ConfigureAwait(true);
+        if (!_runtime.Server.IsRunning)
+        {
+            await StartServerAsync().ConfigureAwait(true);
+        }
+
         _timer.Start();
+        RefreshAll();
+    }
+
+    /// <summary>Обновление всех блоков окна: вызывается при открытии и после действий в трее.</summary>
+    public void RefreshAll()
+    {
+        UpdateServerState();
+        UpdateInvite();
+        UpdateSensors();
+        UpdateClients();
     }
 
     private async Task StartServerAsync()
@@ -294,6 +311,11 @@ public partial class MainWindow : Window
 
     private async void OnToggleServer(object sender, RoutedEventArgs e)
     {
+        await ToggleServerAsync().ConfigureAwait(true);
+    }
+
+    public async Task ToggleServerAsync()
+    {
         if (_runtime.Server.IsRunning)
         {
             await _runtime.StopAsync().ConfigureAwait(true);
@@ -334,23 +356,7 @@ public partial class MainWindow : Window
         UpdateClients();
     }
 
-    protected override async void OnClosing(CancelEventArgs e)
-    {
-        if (_closing)
-        {
-            base.OnClosing(e);
-            return;
-        }
 
-        e.Cancel = true;
-        _closing = true;
-        _timer.Stop();
-
-        await _runtime.StopAsync().ConfigureAwait(true);
-        await _runtime.DisposeAsync().ConfigureAwait(true);
-
-        Close();
-    }
 }
 
 public sealed class SensorRow(string sensorId, string label) : INotifyPropertyChanged

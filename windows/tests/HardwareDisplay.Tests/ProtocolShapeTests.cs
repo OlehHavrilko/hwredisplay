@@ -69,7 +69,7 @@ public sealed class ProtocolShapeTests
             ]);
 
         var json = JsonSerializer.Serialize(
-            FrameMapper.ToSnapshotMessage(new Core.Collection.TelemetryFrame(catalog, snapshot)),
+            FrameMapper.ToSnapshotMessage(snapshot),
             ProtocolJson.Options);
 
         using var document = JsonDocument.Parse(json);
@@ -90,7 +90,7 @@ public sealed class ProtocolShapeTests
             [new DeviceDescriptor("cpu-01", DeviceKind.Cpu, "Процессор")],
             [new SensorDescriptor("cpu-01-time", "cpu-01", "cpu.time_busy.percent", "Занятость CPU по времени", SensorUnit.Percent, "win32.GetSystemTimes", 1000)]);
 
-        var message = FrameMapper.ToCatalogMessage(new Core.Collection.TelemetryFrame(catalog, null!));
+        var message = FrameMapper.ToCatalogMessage(catalog);
 
         Assert.Equal("percent", message.Sensors[0].Unit);
         Assert.Equal("win32.GetSystemTimes", message.Sensors[0].Source);

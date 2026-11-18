@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Text.Json;
 using HardwareDisplay.Core.Model;
+using HardwareDisplay.Core.Protocol;
 using HardwareDisplay.Core.Providers;
 
 namespace HardwareDisplay.Core.Collection;
@@ -13,7 +15,14 @@ public sealed record TelemetryCollectorOptions
     public TimeSpan CatalogRefreshInterval { get; init; } = TimeSpan.FromSeconds(10);
 }
 
-public sealed record TelemetryFrame(Catalog Catalog, Snapshot Snapshot);
+public sealed record TelemetryFrame(Catalog Catalog, Snapshot Snapshot)
+{
+    /// <summary>Готовый к отправке кадр каталога: сериализуется один раз на ревизию.</summary>
+    public byte[] CatalogPayload { get; init; } = [];
+
+    /// <summary>Готовый к отправке снимок: один экземпляр на замер для всех подключений.</summary>
+    public byte[] SnapshotPayload { get; init; } = [];
+}
 
 /// <summary>
 /// Один цикл опроса обслуживает все будущие подключения: провайдеры опрашиваются
@@ -30,6 +39,9 @@ public sealed class TelemetryCollector : IAsyncDisposable
     private Catalog _catalog = new(0, [], []);
     private long _seq;
     private long? _lastCatalogRefreshMs;
+    private byte[]? _catalogPayload;
+    private long _catalogPayloadRevision = -1;
+    private Dictionary<string, ProviderState> _stateBySensor = new(StringComparer.Ordinal);
     private Task? _loop;
     private volatile TelemetryFrame? _latest;
 
@@ -163,6 +175,7 @@ public sealed class TelemetryCollector : IAsyncDisposable
             if (!CatalogEquals(_catalog, orderedDevices, orderedSensors))
             {
                 _catalog = new Catalog(_catalog.Revision + 1, orderedDevices, orderedSensors);
+                _stateBySensor = BuildStateIndex(orderedSensors);
             }
         }
     }
@@ -246,7 +259,21 @@ public sealed class TelemetryCollector : IAsyncDisposable
                 monotonicMs,
                 samples);
 
-            frame = new TelemetryFrame(catalog, snapshot);
+            if (_catalogPayload is null || _catalogPayloadRevision != catalog.Revision)
+            {
+                _catalogPayload = JsonSerializer.SerializeToUtf8Bytes(
+                    FrameMapper.ToCatalogMessage(catalog),
+                    ProtocolJson.Options);
+                _catalogPayloadRevision = catalog.Revision;
+            }
+
+            frame = new TelemetryFrame(catalog, snapshot)
+            {
+                CatalogPayload = _catalogPayload,
+                SnapshotPayload = JsonSerializer.SerializeToUtf8Bytes(
+                    FrameMapper.ToSnapshotMessage(snapshot),
+                    ProtocolJson.Options),
+            };
         }
 
         _latest = frame;
@@ -295,17 +322,25 @@ public sealed class TelemetryCollector : IAsyncDisposable
         _ => SensorStatus.Error,
     };
 
-    private ProviderState? FindState(string sensorId)
+    private ProviderState? FindState(string sensorId) =>
+        _stateBySensor.TryGetValue(sensorId, out var state) ? state : null;
+
+    /// <summary>
+    /// Индекс «датчик → провайдер» строится при смене каталога: опрос каждого датчика
+    /// больше не перебирает провайдеров в поисках владельца.
+    /// </summary>
+    private Dictionary<string, ProviderState> BuildStateIndex(IReadOnlyList<SensorDescriptor> sensors)
     {
+        var index = new Dictionary<string, ProviderState>(sensors.Count, StringComparer.Ordinal);
         foreach (var state in _states)
         {
-            if (state.SensorIds.Contains(sensorId))
+            foreach (var sensorId in state.SensorIds)
             {
-                return state;
+                index[sensorId] = state;
             }
         }
 
-        return null;
+        return index;
     }
 
     private static bool CatalogEquals(Catalog current, IReadOnlyList<DeviceDescriptor> devices, IReadOnlyList<SensorDescriptor> sensors)

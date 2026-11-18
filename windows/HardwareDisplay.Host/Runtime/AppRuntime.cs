@@ -48,7 +48,14 @@ public sealed class AppRuntime : IAsyncDisposable
         var identity = HostIdentity.LoadOrCreate(Path.Combine(directory, "identity"));
         var pairing = new PairingState(Path.Combine(directory, "clients.json"));
 
-        var collector = new TelemetryCollector([new CpuTimeProvider(), new MemoryStatusProvider()]);
+        var collector = new TelemetryCollector([
+            new CpuTimeProvider(),
+            new MemoryStatusProvider(),
+            new GpuEngineProvider(),
+            new GpuMemoryProvider(),
+            new PhysicalDiskProvider(),
+            new HardwareMonitorProvider(),
+        ]);
         var server = new TelemetryServer(identity, pairing, collector);
 
         return new AppRuntime(directory, identity, pairing, collector, server);
@@ -110,6 +117,25 @@ public sealed class AppRuntime : IAsyncDisposable
     public Task StopAsync() => Server.StopAsync();
 
     public PairingInvite RefreshInvite() => Pairing.EnsureInvite(PairingState.ManualInviteLifetime);
+
+    /// <summary>
+    /// Готовое приглашение для буфера обмена: то же содержимое, что в QR-коде.
+    /// </summary>
+    public string? BuildInvitePayload()
+    {
+        if (!Server.IsRunning)
+        {
+            return null;
+        }
+
+        var invite = Pairing.EnsureInvite(PairingState.ManualInviteLifetime);
+        return InvitePayload.Create(
+            Identity.HostIdText,
+            Address?.ToString() ?? string.Empty,
+            Port,
+            Identity.FingerprintSha256,
+            invite.Code).ToJson();
+    }
 
     public IPAddress? Address => Server.BoundAddress;
 

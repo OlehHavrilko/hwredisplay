@@ -290,6 +290,9 @@ public sealed class TelemetryServer
             SubProtocol = ProtocolJson.SubProtocol,
             KeepAliveInterval = TimeSpan.FromSeconds(15),
             KeepAliveTimeout = TimeSpan.FromSeconds(30),
+            // Сжатие уменьшает поток JSON в несколько раз: снимок раз в секунду иначе
+            // тратит трафик и батарею телефона на повторяющихся именах датчиков.
+            DangerousEnableCompression = true,
         }).ConfigureAwait(false);
 
         try
