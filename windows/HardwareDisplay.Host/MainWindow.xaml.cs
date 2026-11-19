@@ -23,6 +23,10 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<SensorRow> _sensors = [];
     private readonly ObservableCollection<ClientRow> _clients = [];
     private readonly Dictionary<string, SensorRow> _rowsBySensor = new(StringComparer.Ordinal);
+    private Catalog? _displayedCatalog;
+    private TelemetryFrame? _displayedFrame;
+    private Dictionary<(string, string), string> _byDeviceAndMetric = [];
+    private Dictionary<string, string> _deviceLabels = new(StringComparer.Ordinal);
 
     public MainWindow(AppRuntime runtime)
     {
@@ -175,16 +179,22 @@ public partial class MainWindow : Window
     private void UpdateSensors()
     {
         var frame = _runtime.Collector.Latest;
-        if (frame is null)
+        if (frame is null || ReferenceEquals(frame, _displayedFrame))
         {
             return;
         }
 
+        _displayedFrame = frame;
+        if (!ReferenceEquals(frame.Catalog, _displayedCatalog))
+        {
+            _displayedCatalog = frame.Catalog;
+            _byDeviceAndMetric = frame.Catalog.Sensors
+                .GroupBy(s => (s.DeviceId, s.MetricKey))
+                .ToDictionary(g => g.Key, g => g.First().SensorId);
+            _deviceLabels = frame.Catalog.Devices.ToDictionary(d => d.DeviceId, d => d.Label, StringComparer.Ordinal);
+        }
+
         var byId = frame.Snapshot.Samples.ToDictionary(s => s.SensorId, StringComparer.Ordinal);
-        var byDeviceAndMetric = frame.Catalog.Sensors
-            .GroupBy(s => (s.DeviceId, s.MetricKey))
-            .ToDictionary(g => g.Key, g => g.First().SensorId);
-        var deviceLabels = frame.Catalog.Devices.ToDictionary(d => d.DeviceId, d => d.Label, StringComparer.Ordinal);
 
         foreach (var descriptor in frame.Catalog.Sensors)
         {
@@ -195,32 +205,30 @@ public partial class MainWindow : Window
                 _sensors.Add(row);
             }
 
-            row.Detail = deviceLabels.TryGetValue(descriptor.DeviceId, out var deviceLabel)
-                ? deviceLabel
-                : descriptor.DeviceId;
+            var detail = _deviceLabels.GetValueOrDefault(descriptor.DeviceId, descriptor.DeviceId);
 
             if (!byId.TryGetValue(descriptor.SensorId, out var reading))
             {
                 row.Display = "—";
-                row.Detail = row.Detail + " · нет в снимке";
+                row.Detail = detail + " · нет в снимке";
                 continue;
             }
 
             if (reading.Status != SensorStatus.Ok || reading.Value is null)
             {
                 row.Display = "—";
-                row.Detail = $"{row.Detail} · {StatusText(reading.Reason)}";
+                row.Detail = $"{detail} · {StatusText(reading.Reason)}";
                 continue;
             }
 
-            row.Display = FormatValue(descriptor, reading.Value.Value, frame, byDeviceAndMetric, byId);
+            row.Detail = detail;
+            row.Display = FormatValue(descriptor, reading.Value.Value, _byDeviceAndMetric, byId);
         }
     }
 
     private static string FormatValue(
         SensorDescriptor descriptor,
         double value,
-        TelemetryFrame frame,
         IReadOnlyDictionary<(string, string), string> byDeviceAndMetric,
         IReadOnlyDictionary<string, SensorReading> byId)
     {

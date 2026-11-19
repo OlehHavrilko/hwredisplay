@@ -91,8 +91,7 @@ internal static class TelemetrySession
     }
 
     /// <summary>
-    /// Кадр уже сериализован один раз на замер, поэтому отправка не тратит CPU пропорционально
-    /// числу телефонов и не создаёт копию JSON на каждое соединение.
+    /// Сессии используют общий JSON снимка. Сжатие выполняется для каждого сокета.
     /// </summary>
     private static async Task SendAsync(WebSocket socket, byte[] payload, TimeSpan timeout, CancellationToken token)
     {

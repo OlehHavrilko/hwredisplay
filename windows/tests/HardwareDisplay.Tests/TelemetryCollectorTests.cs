@@ -8,6 +8,20 @@ namespace HardwareDisplay.Tests;
 public sealed class TelemetryCollectorTests
 {
     [Fact]
+    public async Task Concurrent_connections_share_one_snapshot_payload()
+    {
+        var catalog = new Catalog(1, [], []);
+        var snapshot = new Snapshot(Guid.NewGuid(), catalog.Revision, 1, DateTimeOffset.UtcNow, 1, []);
+        var frame = new TelemetryFrame(catalog, snapshot);
+
+        var payloads = await Task.WhenAll(Enumerable.Range(0, 8)
+            .Select(_ => Task.Run(() => frame.SnapshotPayload)));
+
+        Assert.NotEmpty(payloads[0]);
+        Assert.All(payloads, payload => Assert.Same(payloads[0], payload));
+    }
+
+    [Fact]
     public async Task Publishes_ok_reading_with_age_and_growing_seq()
     {
         var provider = new FakeProvider("test", FakeProvider.Sensor("sensor-1"))

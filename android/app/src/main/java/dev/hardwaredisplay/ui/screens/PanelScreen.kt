@@ -14,7 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
@@ -22,15 +23,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,19 +76,20 @@ fun PanelScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     val activePreset = presets.firstOrNull { it.presetId == activePresetId } ?: presets.firstOrNull()
     val primaryCard = cards.firstOrNull { it.roleEnum == CardRole.PRIMARY } ?: cards.firstOrNull()
     val secondaryCards = cards.filter { it.roleEnum == CardRole.SECONDARY }
-    val lineCards = secondaryCards.filter { it.viewEnum == CardView.LINE }
-
-    var history by remember { mutableStateOf<Map<String, List<HistoryPointEntity>>>(emptyMap()) }
-    LaunchedEffect(activePresetId, lineCards.map { it.sensorId }) {
-        while (true) {
-            if (lineCards.isEmpty()) {
-                history = emptyMap()
-            } else {
-                history = lineCards.associate { card ->
-                    card.sensorId to viewModel.historyFor(card.sensorId, 15 * 60_000L)
-                }
+    val chartIds = remember(cards) {
+        cards.filter { it.viewEnum == CardView.LINE }.map { it.sensorId }.distinct()
+    }
+    val history by produceState(
+        initialValue = emptyMap<String, List<HistoryPointEntity>>(),
+        host?.hostId,
+        chartIds,
+    ) {
+        value = emptyMap()
+        if (chartIds.isNotEmpty()) {
+            while (true) {
+                value = chartIds.associateWith { viewModel.historyFor(it, 15 * 60_000L) }
+                delay(5_000)
             }
-            delay(5_000)
         }
     }
 
@@ -111,13 +111,17 @@ fun PanelScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
     }
 
     BoxWithConstraints(modifier.fillMaxSize().background(Palette.Background)) {
-        val landscape = maxWidth > maxHeight
+        val wide = maxWidth >= 600.dp && maxWidth > maxHeight
+        val compare = { viewModel.navigate(Screen.Compare) }
+        val edit = {
+            viewModel.startEdit(activePreset)
+            viewModel.navigate(Screen.Editor)
+        }
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = Dimens.ScreenPadding, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Dimens.Gap),
+                .padding(horizontal = Dimens.ScreenPadding, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(if (wide) 8.dp else Dimens.Gap),
         ) {
             HeaderRow(
                 hostLabel = host?.label ?: "ПК не выбран",
@@ -127,82 +131,95 @@ fun PanelScreen(viewModel: AppViewModel, modifier: Modifier = Modifier) {
                 onToggleKeepScreen = viewModel::toggleKeepScreenOn,
             )
 
-            if (connection is ConnectionState.Lost || connection is ConnectionState.Failed) {
-                LinkLostRow(
-                    text = connectionLabel(connection) + (telemetry?.let {
-                        ", последний замер " + MetricFormat.clockTime(it.capturedAtUtcMs)
-                    } ?: ""),
-                    onRetry = viewModel::reconnect,
-                )
-            }
-
-            if (connection is ConnectionState.AccessDenied ||
-                connection is ConnectionState.TrustFailed ||
-                connection is ConnectionState.Incompatible
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Gap),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                LinkLostRow(
-                    text = when (connection) {
-                        is ConnectionState.AccessDenied -> "Доступ отозван на ПК. Нужно новое приглашение."
-                        is ConnectionState.TrustFailed -> "Не удалось подтвердить ПК: сертификат не совпал."
-                        else -> "Версия протокола несовместима с приложением."
-                    },
-                    onRetry = { viewModel.navigate(Screen.Connect) },
-                    actionLabel = "Сопрячь заново",
+                PresetRow(
+                    presets = presets.map { it.presetId to it.name },
+                    activePresetId = activePreset?.presetId,
+                    onSelect = viewModel::selectPreset,
+                    modifier = Modifier.weight(1f),
                 )
+                if (wide) PanelActions(compare, edit)
             }
 
-            PresetRow(
-                presets = presets.map { it.presetId to it.name },
-                activePresetId = activePreset?.presetId,
-                onSelect = viewModel::selectPreset,
-            )
-
-            val primaryUi = metric(primaryCard)
-
-            if (landscape) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Gap)) {
-                    MainMetricCard(
-                        ui = primaryUi,
-                        onOpen = { viewModel.navigate(Screen.Compare) },
-                        modifier = Modifier.weight(1.1f),
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimens.Gap),
+            ) {
+                if (connection is ConnectionState.Lost || connection is ConnectionState.Failed) {
+                    LinkLostRow(
+                        text = connectionLabel(connection) + (telemetry?.let {
+                            ", последний замер " + MetricFormat.clockTime(it.capturedAtUtcMs)
+                        } ?: ""),
+                        onRetry = viewModel::reconnect,
                     )
-                    Column(
-                        Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(Dimens.Gap),
-                    ) {
+                }
+
+                if (connection is ConnectionState.AccessDenied ||
+                    connection is ConnectionState.TrustFailed ||
+                    connection is ConnectionState.Incompatible
+                ) {
+                    LinkLostRow(
+                        text = when (connection) {
+                            is ConnectionState.AccessDenied -> "Доступ отозван на ПК. Нужно новое приглашение."
+                            is ConnectionState.TrustFailed -> "Не удалось подтвердить ПК: сертификат не совпал."
+                            else -> "Версия протокола несовместима с приложением."
+                        },
+                        onRetry = { viewModel.navigate(Screen.Connect) },
+                        actionLabel = "Сопрячь заново",
+                    )
+                }
+
+                val primaryUi = metric(primaryCard)
+                val primaryHistory = primaryCard?.takeIf { it.viewEnum == CardView.LINE }
+                    ?.let { history[it.sensorId] }
+
+                if (wide && secondaryCards.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Gap)) {
+                        MainMetricCard(
+                            ui = primaryUi,
+                            onOpen = compare,
+                            modifier = Modifier.weight(1f),
+                            points = primaryHistory,
+                        )
                         SecondaryGrid(
                             cards = secondaryCards,
                             metric = ::metric,
                             history = history,
-                            columns = 1,
-                            onOpen = { viewModel.navigate(Screen.Compare) },
+                            columns = 2,
+                            onOpen = compare,
+                            modifier = Modifier.weight(1.7f),
+                            compact = true,
                         )
                     }
+                } else {
+                    MainMetricCard(
+                        ui = primaryUi,
+                        onOpen = compare,
+                        points = primaryHistory,
+                    )
+                    SecondaryGrid(
+                        cards = secondaryCards,
+                        metric = ::metric,
+                        history = history,
+                        columns = 2,
+                        onOpen = compare,
+                    )
                 }
-            } else {
-                MainMetricCard(
-                    ui = primaryUi,
-                    onOpen = { viewModel.navigate(Screen.Compare) },
-                )
-                SecondaryGrid(
-                    cards = secondaryCards,
-                    metric = ::metric,
-                    history = history,
-                    columns = 2,
-                    onOpen = { viewModel.navigate(Screen.Compare) },
-                )
             }
-
-            Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Gap)) {
-                OutlinedAction("Сравнить", { viewModel.navigate(Screen.Compare) }, accent = true)
-                OutlinedAction("Изменить", {
-                    viewModel.startEdit(activePreset)
-                    viewModel.navigate(Screen.Editor)
-                })
-            }
-            Spacer(Modifier.height(12.dp))
+            if (!wide) PanelActions(compare, edit, Modifier.fillMaxWidth())
         }
+    }
+}
+
+@Composable
+private fun PanelActions(onCompare: () -> Unit, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(Dimens.Gap, Alignment.End)) {
+        OutlinedAction("Сравнить", onCompare, accent = true)
+        OutlinedAction("Изменить", onEdit)
     }
 }
 
@@ -256,12 +273,12 @@ private fun HeaderRow(
                 .height(Dimens.MinTouch)
                 .clip(RoundedCornerShape(50))
                 .background(if (keepScreenOn) Palette.Accent else Palette.Raised)
-                .clickable(onClick = onToggleKeepScreen)
+                .toggleable(value = keepScreenOn, role = Role.Switch, onValueChange = { onToggleKeepScreen() })
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = if (keepScreenOn) "Экран вкл" else "Экран выкл",
+                text = "Не гасить",
                 style = MaterialTheme.typography.labelMedium,
                 color = if (keepScreenOn) Palette.Background else Palette.TextSecondary,
             )
@@ -296,9 +313,10 @@ private fun PresetRow(
     presets: List<Pair<String, String>>,
     activePresetId: String?,
     onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()),
+        modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -310,7 +328,7 @@ private fun PresetRow(
                     .clip(RoundedCornerShape(50))
                     .background(if (active) Palette.Raised else Palette.Card)
                     .border(1.dp, if (active) Palette.Accent else Palette.Border, RoundedCornerShape(50))
-                    .clickable { onSelect(id) }
+                    .selectable(selected = active, role = Role.Tab, onClick = { onSelect(id) })
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -332,17 +350,20 @@ private fun SecondaryGrid(
     history: Map<String, List<HistoryPointEntity>>,
     columns: Int,
     onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     if (cards.isEmpty()) {
         Text(
             text = "Дополнительных карточек нет. Добавьте их в редакторе.",
             style = MaterialTheme.typography.labelMedium,
             color = Palette.TextSecondary,
+            modifier = modifier,
         )
         return
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(Dimens.Gap)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Dimens.Gap)) {
         cards.chunked(columns).forEach { row ->
             Row(
                 Modifier.fillMaxWidth(),
@@ -354,6 +375,7 @@ private fun SecondaryGrid(
                         onOpen = onOpen,
                         modifier = Modifier.weight(1f),
                         points = if (card.viewEnum == CardView.LINE) history[card.sensorId] else null,
+                        compact = compact,
                     )
                 }
                 repeat(columns - row.size) {

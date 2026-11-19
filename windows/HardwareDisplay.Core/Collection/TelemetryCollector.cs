@@ -15,13 +15,19 @@ public sealed record TelemetryCollectorOptions
     public TimeSpan CatalogRefreshInterval { get; init; } = TimeSpan.FromSeconds(10);
 }
 
-public sealed record TelemetryFrame(Catalog Catalog, Snapshot Snapshot)
+public sealed class TelemetryFrame(Catalog catalog, Snapshot snapshot)
 {
+    private readonly Lazy<byte[]> _snapshotPayload = new(() =>
+        JsonSerializer.SerializeToUtf8Bytes(FrameMapper.ToSnapshotMessage(snapshot), ProtocolJson.Options));
+
+    public Catalog Catalog { get; } = catalog;
+    public Snapshot Snapshot { get; } = snapshot;
+
     /// <summary>Готовый к отправке кадр каталога: сериализуется один раз на ревизию.</summary>
     public byte[] CatalogPayload { get; init; } = [];
 
-    /// <summary>Готовый к отправке снимок: один экземпляр на замер для всех подключений.</summary>
-    public byte[] SnapshotPayload { get; init; } = [];
+    /// <summary>Снимок кодируется при первой отправке и используется всеми подключениями.</summary>
+    public byte[] SnapshotPayload => _snapshotPayload.Value;
 }
 
 /// <summary>
@@ -270,9 +276,6 @@ public sealed class TelemetryCollector : IAsyncDisposable
             frame = new TelemetryFrame(catalog, snapshot)
             {
                 CatalogPayload = _catalogPayload,
-                SnapshotPayload = JsonSerializer.SerializeToUtf8Bytes(
-                    FrameMapper.ToSnapshotMessage(snapshot),
-                    ProtocolJson.Options),
             };
         }
 

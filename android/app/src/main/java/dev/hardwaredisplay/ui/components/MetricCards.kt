@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,13 +69,15 @@ fun MainMetricCard(
     ui: MetricUi,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
+    points: List<HistoryPointEntity>? = null,
 ) {
+    val accent = toneColor(ui.tone)
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.CardRadius))
-            .background(Palette.Card)
-            .border(1.dp, Palette.Border, RoundedCornerShape(Dimens.CardRadius))
+            .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.13f), Palette.Card)))
+            .border(1.dp, accent.copy(alpha = 0.38f), RoundedCornerShape(Dimens.CardRadius))
             .clickable(onClick = onOpen)
             .padding(20.dp),
     ) {
@@ -90,7 +93,7 @@ fun MainMetricCard(
             Text(
                 text = ui.value ?: "—",
                 style = MaterialTheme.typography.displayLarge,
-                color = if (ui.tone == MetricTone.OFFLINE) Palette.TextSecondary else Palette.Text,
+                color = if (ui.tone == MetricTone.FRESH) Palette.Accent else Palette.TextSecondary,
             )
             if (ui.unit != null) {
                 Spacer(Modifier.size(8.dp))
@@ -101,6 +104,10 @@ fun MainMetricCard(
                     modifier = Modifier.padding(bottom = 10.dp),
                 )
             }
+        }
+        if (points != null && points.size > 1) {
+            Spacer(Modifier.height(12.dp))
+            MiniSparkline(points = points, color = accent)
         }
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -121,15 +128,16 @@ fun CompactMetricCard(
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
     points: List<HistoryPointEntity>? = null,
+    compact: Boolean = false,
 ) {
     Column(
         modifier = modifier
-            .heightIn(min = 104.dp)
+            .heightIn(min = if (compact) 84.dp else 104.dp)
             .clip(RoundedCornerShape(Dimens.CompactRadius))
             .background(Palette.Card)
             .border(1.dp, Palette.Border, RoundedCornerShape(Dimens.CompactRadius))
             .clickable(onClick = onOpen)
-            .padding(14.dp),
+            .padding(horizontal = 14.dp, vertical = if (compact) 10.dp else 14.dp),
     ) {
         Text(
             text = ui.title,

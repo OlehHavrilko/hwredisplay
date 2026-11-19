@@ -13,6 +13,7 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "hosts")
@@ -98,7 +99,7 @@ interface HostDao {
     @Query("SELECT * FROM hosts WHERE hostId = :hostId")
     suspend fun get(hostId: String): HostEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(host: HostEntity)
 
     @Query("DELETE FROM hosts WHERE hostId = :hostId")

@@ -1,52 +1,46 @@
 # HardwareDisplay
 
-Android-телефон как второй экран датчиков Windows-ПК. Windows-приложение читает телеметрию, поднимает TLS-сервер в локальной сети и отдаёт её по WebSocket; телефон собирает из показателей собственную панель и остаётся на виду во время игры или рендера.
+**Телефон как второй экран датчиков Windows-ПК.** Поставьте его рядом с монитором, чтобы видеть загрузку процессора и видеокарты, память, температуры и активность дисков во время игры или рендера.
 
-Состояние: работают Windows-хост и Android-клиент. Хост читает CPU, RAM, GPU и VRAM, диски, температуры и вентиляторы, держит TLS-сервер, сопряжение и поток `hello → catalog → snapshot`, живёт в трее без окна (окно настроек и QR открывается по требованию), с автозапуском и правилом брандмауэра. Телефон сопрягается по QR и вручную, показывает панель, пресеты, редактор, сравнение и локальную историю. Сквозной сценарий проверен на эмуляторе Android 17 (профиль Poco X5 Pro 5G) с реальным ПК.
+## Скачать предварительную сборку
 
-| Что | Где |
-| --- | --- |
-| Документация проекта | [docs/README.md](docs/README.md) |
-| Продуктовые цели и сценарий | [MAIN_PROMPT.md](MAIN_PROMPT.md) |
-| Архитектура | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Протокол v1 | [docs/PROTOCOL.md](docs/PROTOCOL.md) |
-| Дизайн панели | [docs/DESIGN.md](docs/DESIGN.md) |
-| Android-клиент | [docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md) |
-| Хост: датчики, трей, оптимизация | [docs/HOST_DESKTOP.md](docs/HOST_DESKTOP.md) |
-| План, критерии и текущее состояние | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) |
-| Обоснование выбора источников датчиков | [reports/Мониторинг ПК с телефона.md](reports/Мониторинг%20ПК%20с%20телефона.md) |
+| Платформа | Файл | Для кого |
+| --- | --- | --- |
+| Windows 11 x64 | [EXE · 86 МиБ](https://github.com/OlehHavrilko/hwredisplay/releases/download/v0.1.0-preview.1/HardwareDisplay-win-x64.exe) | Портативный хост со встроенным .NET |
+| Android 8.0+ · ARM64 | [APK · 8 МиБ](https://github.com/OlehHavrilko/hwredisplay/releases/download/v0.1.0-preview.1/HardwareDisplay-android-arm64-v8a.apk) | Большинство телефонов, включая Poco X5 Pro 5G |
+| Android 8.0+ · ARMv7 / x86_64 | [Все сборки](https://github.com/OlehHavrilko/hwredisplay/releases/tag/v0.1.0-preview.1) | 32-битные ARM-устройства и эмулятор |
 
-## Сборка и запуск
+Это предварительный выпуск. APK подписан отладочным ключом, EXE без цифровой подписи. Сквозной сценарий проверен с реальным ПК и эмулятором Android 17. [Примечания к выпуску и SHA-256](https://github.com/OlehHavrilko/hwredisplay/releases/tag/v0.1.0-preview.1)
+
+## Панель
+
+<p align="center">
+  <img src="docs/screenshots/preview-panel-portrait.png" width="210" alt="Портретная панель с показателями CPU и дисков">
+  <img src="docs/screenshots/preview-panel-landscape.png" width="510" alt="Альбомная панель с основным показателем слева и сеткой датчиков справа">
+</p>
+
+- **Показания в реальном времени.** CPU, RAM, GPU, VRAM, диски и доступные на ПК температуры и обороты вентиляторов.
+- **Своя раскладка.** Выберите пресет, назначьте главный датчик и переключите карточку с числа на график. В альбомной ориентации дополнительные датчики расположены в две колонки.
+- **История и сравнение.** Сравнивайте ряды за 5, 15 или 60 минут. При обрыве связи панель показывает время последнего замера.
+- **Локальное подключение.** Windows-хост работает в трее и отправляет телеметрию через защищённый WebSocket в локальной сети. Аккаунт не требуется.
+
+## Первый запуск
+
+1. Запустите EXE на ПК и установите подходящий APK на телефон.
+2. Подключите устройства к одной локальной сети. Если Windows запросит сетевой доступ, разрешите его для частной сети.
+3. Откройте настройки хоста из трея. На телефоне отсканируйте QR-код или перенесите данные приглашения вручную.
+
+## Сборка из исходников
+
+Для Windows нужен .NET SDK из [global.json](global.json). Android-проект открывается в Android Studio из каталога `android/`. Исходники Android используют SDK API 37 и Java 17.
 
 ```powershell
 . .\scripts\dev-env.ps1
 dotnet build HardwareDisplay.slnx
 dotnet test windows\tests\HardwareDisplay.Tests
-windows\HardwareDisplay.Host\bin\Debug\net10.0-windows\HardwareDisplay.Host.exe
+.\android\gradlew.bat -p android :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-Android-клиент собирается отдельным Gradle-проектом в `android/` и открывается в Android Studio как этот каталог:
+APK по архитектурам находятся в `android/app/build/outputs/apk/debug/`. Для эмулятора x86_64 используйте `app-x86_64-debug.apk`.
 
-```powershell
-.\android\gradlew.bat -p android :app:assembleDebug
-.\android\gradlew.bat -p android :app:testDebugUnitTest
-adb install -r android\app\build\outputs\apk\debug\app-debug.apk
-```
-
-Нужен .NET SDK 10.0.404 (закреплён `global.json`) и JDK 17+ для Android (использован JBR из Android Studio). `scripts\dev-env.ps1` заполняет переменные окружения, без которых NuGet на некоторых машинах падает с `Value cannot be null. (Parameter 'path1')`.
-
-После первого запуска Windows спросит про доступ в сеть — без разрешения телефон не подключится. Адрес, имя ПК, отпечаток сертификата и код приглашения показывает окно хоста.
-
-## Структура
-
-```text
-windows/HardwareDisplay.Core      Каталог датчиков, расписание опроса, состояния, снимки
-windows/HardwareDisplay.Windows   Датчики: Win32, PDH (GPU, диски), DXGI, LibreHardwareMonitor
-windows/HardwareDisplay.Host/Desktop  Трей, автозапуск, правило брандмауэра
-windows/HardwareDisplay.Host      WPF-окно, идентичность, Kestrel, сопряжение, WebSocket
-windows/tests                     Тесты сбора, идентичности, TLS и рассылки
-android/app                       Kotlin/Compose-клиент: протокол, pinned TLS, сессия, панель, Room
-scripts/                          Окружение сборки и проверки интерфейса
-tools/protocol-smoke.py           Сторонний клиент протокола для проверки живого сервера
-docs/ reports/ research_notes/    Проект, исследование и доказательства
-```
+[Документация](docs/README.md) · [Android-клиент](docs/ANDROID_CLIENT.md) · [Windows-хост](docs/HOST_DESKTOP.md) · [Протокол](docs/PROTOCOL.md) · [План развития](docs/IMPLEMENTATION_PLAN.md)
